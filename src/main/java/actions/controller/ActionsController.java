@@ -13,6 +13,6 @@ public class ActionsController {
 
     @GetMapping(value = "/api/argocd")
     public String actionsTest() {
-        return "app-with-argocd version:0.0.1";
+        return "app-with-argocd version:0.0.2";
     }
 }
