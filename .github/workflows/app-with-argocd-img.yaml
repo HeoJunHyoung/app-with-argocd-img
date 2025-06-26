@@ -60,22 +60,39 @@ jobs:
 
   cd:
     runs-on: ubuntu-latest
-
     needs: ci
-    
+      
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: main
+        ref: ${{ github.ref }}  # 현재 브랜치 사용
         token: ${{ secrets.GH_TOKEN }}
-        
-    - name: Set up Image
+        fetch-depth: 0  # 전체 히스토리 가져오기
+  
+    - name: Debug directory structure
       run: |
-        sed -i "s%image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:latest%image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}%" ./manifest/argocd-img-deployment.yaml        
+        echo "Current directory: $(pwd)"
+        ls -R
+        echo "Manifest file content:"
+        cat ./manifest/argocd-img-deployment.yaml || echo "File not found"
+  
+    - name: Update image tag
+      run: |
+        echo "Updating image to: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}"
+        sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:latest|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}|" ./manifest/argocd-img-deployment.yaml
+        echo "Updated file content:"
+        cat ./manifest/argocd-img-deployment.yaml
+        git diff  # 변경사항 확인
+  
     - name: Commit and push changes
       run: |
         git config --local user.email "gjwnsgud4016@gmail.com"
         git config --local user.name "HeoJunHyoung"
         git add .
-        git commit -m "Update nginx image to latest"
-        git push
+        if ! git diff --cached --quiet; then
+          git commit -m "Update image to ${{ github.sha }}"
+          git push
+        else
+          echo "No changes to commit"
+          exit 1
+        fi
