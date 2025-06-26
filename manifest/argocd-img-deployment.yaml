@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-img-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-web-img
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argocd-web-img
+    spec:
+      containers:
+      - name: 
+        image: 
