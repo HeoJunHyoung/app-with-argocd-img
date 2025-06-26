@@ -1,8 +1,8 @@
 name: App With Github Actions with ArgoCD
 
 on:
-  # workflow_dispatch
-  push
+  workflow_dispatch
+  # push
 
 jobs:
   ci:
@@ -57,3 +57,24 @@ jobs:
         context: .
         push: true
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}
+
+  cd:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: main
+        token: ${{ secrets.GH_TOKEN }}
+        
+    - name: Set up Image
+      run: |
+        sed -i "s%image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:latest%image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}%: manifest/argocd-img-deployment.yaml
+        
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "gjwnsgud4016@gmail.com"
+        git config --local user.name "HeoJunHyoung"
+        git add .
+        git commit -m "Update nginx image to latest"
+        git push
