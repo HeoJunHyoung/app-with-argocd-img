@@ -13,5 +13,5 @@ spec:
         app.kubernetes.io/name: argocd-web-img
     spec:
       containers:
-      - name: 
-        image: 
+      - name: argocd-img
+        image: gjwnsgud4016/app-with-argocd-img:latest
