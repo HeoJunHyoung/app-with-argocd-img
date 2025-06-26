@@ -1,7 +1,8 @@
-name: App With Github Actions with docker-compose CI/CD
+name: App With Github Actions with ArgoCD
 
 on:
-  push
+  workflow_dispatch
+  # push
 
 jobs:
   ci:
@@ -15,16 +16,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
-    - name: Make application-prod.properties
+
+    - name: Make application.properties
       run: |
         mkdir -p ./src/main/resources
         cd ./src/main/resources
         touch ./application.properties
         echo "${{ secrets.PROPERTIES }}" > ./application.properties
       shell: bash
-      
+
     - name: Build with Maven
-      run: mvn -DskipTests -B package --file pom.xml
+      run: mvn -B -DskipTests package --file pom.xml
       
     - name: Naming jar file
       run: mv ./target/*.jar ./target/app.jar
@@ -54,22 +56,26 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/app-with-actions:latest
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}
+
   cd:
-    needs: ci
     runs-on: ubuntu-latest
+
+    needs: ci
+    
     steps:
-    - name: Execute deployment script
-      uses: appleboy/ssh-action@v1.2.0
-      env: 
-        COMPOSE_FILE: "/home/ubuntu/docker-compose.yml"
+    - uses: actions/checkout@v4
       with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        script: |
-            # cd
-            sudo docker-compose down
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app-with-actions
-            sudo docker-compose up -f $COMPOSE_FILE -d
-            sudo docker image prune -f
+        ref: main
+        token: ${{ secrets.GH_TOKEN }}
+        
+    - name: Set up Image
+      run: |
+        sed -i "s%image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:latest%image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.sha }}%" ./manifest/argocd-img-deployment.yaml        
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "gjwnsgud4016@gmail.com"
+        git config --local user.name "HeoJunHyoung"
+        git add .
+        git commit -m "Update nginx image to latest"
+        git push
